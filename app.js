@@ -1,5 +1,8 @@
+require("dotenv").config();
+
 const express = require('express');
 const app = express();
+
 app.use(express.json()); // Parse JSON bodies
 
 let todos = [
@@ -14,9 +17,43 @@ app.get('/todos', (req, res) => {
 
 // POST New – Create
 app.post('/todos', (req, res) => {
-  const newTodo = { id: todos.length + 1, ...req.body }; // Auto-ID
+  const { task } = req.body;
+
+  // Validation
+  if (!task || task.trim() === '') {
+    return res.status(400).json({
+      error: 'Task field is required'
+    });
+  }
+  const newTodo = {
+    id: todos.length + 1,
+    task,
+    completed: false
+  };
   todos.push(newTodo);
-  res.status(201).json(newTodo); // Echo back
+  res.status(201).json(newTodo);
+});
+
+// GET Active – Not Completed
+app.get('/todos/active', (req, res) => {
+  const activeTodos = todos.filter((t) => !t.completed);
+  res.status(200).json(activeTodos);
+});
+
+app.get('/todos/completed', (req, res) => {
+  const completed = todos.filter((t) => t.completed);
+  res.json(completed); // Custom Read!
+});
+
+// Get todo by ID
+app.get('/todos/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+
+  const todo = todos.find((t) => t.id === id);
+  if (!todo) {
+    return res.status(404).json({ message: 'Todo not found' });
+  }
+  res.status(200).json(todo);
 });
 
 // PATCH Update – Partial
@@ -37,14 +74,14 @@ app.delete('/todos/:id', (req, res) => {
   res.status(204).send(); // Silent success
 });
 
-app.get('/todos/completed', (req, res) => {
-  const completed = todos.filter((t) => t.completed);
-  res.json(completed); // Custom Read!
-});
 
 app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Server error!' });
 });
 
-const PORT = 3002;
-app.listen(PORT, () => console.log(`Server on port ${PORT}`));
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+console.log(`API live port: ${PORT}`);
+});
+
